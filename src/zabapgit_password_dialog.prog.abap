@@ -31,7 +31,7 @@ SELECTION-SCREEN BEGIN OF SCREEN 1003 TITLE sc_otit.
 SELECTION-SCREEN SKIP.
 SELECTION-SCREEN BEGIN OF LINE.
 SELECTION-SCREEN COMMENT 1(22) sc_ourl FOR FIELD p_ourl.
-PARAMETERS: p_ourl TYPE c LENGTH 100 LOWER CASE VISIBLE LENGTH 65 ##SEL_WRONG.
+PARAMETERS: p_ourl TYPE string LOWER CASE VISIBLE LENGTH 65 ##SEL_WRONG.
 SELECTION-SCREEN END OF LINE.
 SELECTION-SCREEN SKIP.
 SELECTION-SCREEN BEGIN OF LINE.
@@ -66,10 +66,14 @@ SELECTION-SCREEN END OF LINE.
 SELECTION-SCREEN SKIP.
 SELECTION-SCREEN BEGIN OF LINE.
 SELECTION-SCREEN COMMENT 1(22) sc_mcid FOR FIELD p_mcid.
-PARAMETERS: p_mcid TYPE c LENGTH 80 LOWER CASE VISIBLE LENGTH 60 ##SEL_WRONG.
+PARAMETERS: p_mcid TYPE string LOWER CASE VISIBLE LENGTH 60 ##SEL_WRONG.
 SELECTION-SCREEN END OF LINE.
 SELECTION-SCREEN BEGIN OF LINE.
-SELECTION-SCREEN COMMENT 1(81) sc_mhlp.
+SELECTION-SCREEN COMMENT 1(22) sc_mprv FOR FIELD p_mprv.
+PARAMETERS: p_mprv TYPE string LOWER CASE VISIBLE LENGTH 60 ##SEL_WRONG.
+SELECTION-SCREEN END OF LINE.
+SELECTION-SCREEN BEGIN OF LINE.
+SELECTION-SCREEN COMMENT 1(80) sc_mhlp.
 SELECTION-SCREEN END OF LINE.
 SELECTION-SCREEN END OF SCREEN 1004.
 
@@ -307,19 +311,24 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
            gv_confirmed, gv_cancelled, gv_use_basic.
 
     " Show auth method choice first
-    CLEAR: p_mbasic, p_moauth, p_mcid.
+    CLEAR: p_mbasic, p_moauth, p_mcid, p_mprv.
     p_mbasic = abap_true.
 
     gs_provider = zcl_abapgit_oauth_device_flow=>get_provider_config( iv_url ).
-    sc_mcid     = 'Client ID:'.
-    sc_mbas     = 'Username / Password / Personal Access Token'.
-    sc_moas     = 'SSO (OAuth 2.0 Device Code Flow)'.
-    sc_mhlp     = 'For OAuth: register app at your Git provider, then enter Client ID'.
-    sc_mtit     = 'Authentication Method'.
+
+    " Show auto-detected device code URL so user can verify (display-only)
+    p_mprv  = gs_provider-device_code_url.
+
+    sc_mcid  = 'Client ID (OAuth App):'.
+    sc_mprv  = 'Device code URL:'.
+    sc_mbas  = 'Username / Password / Personal Access Token'.
+    sc_moas  = 'SSO (OAuth 2.0 Device Code Flow)'.
+    sc_mhlp  = 'OAuth: register an OAuth App and enter its Client ID above'.
+    sc_mtit  = 'Authentication Method'.
 
     ls_position = zcl_abapgit_popups=>center(
-      iv_width  = 70
-      iv_height = 8 ).
+      iv_width  = 80
+      iv_height = 10 ).
 
     CALL SELECTION-SCREEN c_dynnr_choice
       STARTING AT ls_position-start_column ls_position-start_row
@@ -335,9 +344,14 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    " OAuth chosen - store client_id from dialog
+    " OAuth chosen: accept client_id from dialog
     IF p_mcid IS NOT INITIAL.
       gs_provider-client_id = p_mcid.
+    ENDIF.
+
+    " Allow user to override the auto-detected device code URL
+    IF p_mprv IS NOT INITIAL AND p_mprv <> gs_provider-device_code_url.
+      gs_provider-device_code_url = p_mprv.
     ENDIF.
 
     " Initiate OAuth device flow
@@ -346,7 +360,7 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
     " Populate screen 1003 fields
     p_ourl  = ls_device-verification_uri.
     p_ocode = ls_device-user_code.
-    p_ostat = 'Open browser, log in, enter the code above, then click Check'.
+    p_ostat = 'Open browser, log in, enter the code, then click Check'.
     gv_device_code = ls_device-device_code.
 
     enrich_title_by_hostname( iv_url ).
@@ -457,8 +471,10 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
     " Keep Client ID always editable: radio button selection does not
     " re-fire AT SELECTION-SCREEN OUTPUT, so conditional disabling would
     " leave the field permanently grayed-out when Basic is the default.
+    " Device code URL is shown read-only (informational); user can edit it
+    " if the auto-detected endpoint is wrong (e.g. custom GHE instance).
     LOOP AT SCREEN.
-      IF screen-name = 'P_MCID'.
+      IF screen-name = 'P_MCID' OR screen-name = 'P_MPRV'.
         screen-input = '1'.
         MODIFY SCREEN.
       ENDIF.
@@ -516,16 +532,15 @@ FORM oauth_device_popup
         cv_token     TYPE string
         cv_use_basic TYPE abap_bool ##CALLED.
 
-  TRY.
-      lcl_oauth_device_dialog=>popup(
-        EXPORTING
-          iv_url       = pv_url
-        IMPORTING
-          ev_use_basic = cv_use_basic
-        RECEIVING
-          rv_token     = cv_token ).
-    CATCH zcx_abapgit_exception ##NO_HANDLER.
-  ENDTRY.
+  " Let zcx_abapgit_exception propagate: acquire_login_details handles it.
+  " Only cx_sy_dyn_call_illegal_form (API context) must be caught here.
+  lcl_oauth_device_dialog=>popup(
+    EXPORTING
+      iv_url       = pv_url
+    IMPORTING
+      ev_use_basic = cv_use_basic
+    RECEIVING
+      rv_token     = cv_token ).
 
 ENDFORM.
 

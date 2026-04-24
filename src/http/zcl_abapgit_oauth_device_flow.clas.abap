@@ -43,7 +43,9 @@ CLASS zcl_abapgit_oauth_device_flow DEFINITION
         !iv_url                   TYPE string
         !iv_client_id             TYPE string OPTIONAL
       RETURNING
-        VALUE(rs_provider_config) TYPE ty_provider_config.
+        VALUE(rs_provider_config) TYPE ty_provider_config
+      RAISING
+        zcx_abapgit_exception.
 
     CLASS-METHODS is_supported
       IMPORTING
@@ -89,19 +91,41 @@ CLASS zcl_abapgit_oauth_device_flow IMPLEMENTATION.
   METHOD get_provider_config.
 
     DATA lv_url_lower TYPE string.
+    DATA lv_base_url  TYPE string.
 
     lv_url_lower = to_lower( iv_url ).
 
     IF lv_url_lower CS 'github.com'.
+      " GitHub Cloud or GitHub Enterprise Cloud (*.github.com)
       rs_provider_config-name            = 'GitHub'.
       rs_provider_config-device_code_url = 'https://github.com/login/device/code'.
       rs_provider_config-token_url       = 'https://github.com/login/oauth/access_token'.
       rs_provider_config-scope           = 'repo'.
     ELSEIF lv_url_lower CS 'gitlab.com'.
+      " GitLab.com (cloud)
       rs_provider_config-name            = 'GitLab'.
       rs_provider_config-device_code_url = 'https://gitlab.com/oauth/authorize_device'.
       rs_provider_config-token_url       = 'https://gitlab.com/oauth/token'.
       rs_provider_config-scope           = 'api read_user'.
+    ELSE.
+      " GitHub Enterprise Server or other HTTPS provider:
+      " derive OAuth endpoints from the repository's own hostname.
+      " GHE device-code URL: https://HOSTNAME/login/device/code
+      " GHE token URL:       https://HOSTNAME/login/oauth/access_token
+      TRY.
+          lv_base_url = zcl_abapgit_url=>host( iv_url ).
+        CATCH zcx_abapgit_exception.
+          " Fallback: extract base URL with a simple regex
+          FIND REGEX '(https?://[^/]*)' IN iv_url
+            SUBMATCHES lv_base_url ##REGEX_POSIX.
+      ENDTRY.
+      IF lv_base_url IS INITIAL.
+        zcx_abapgit_exception=>raise( |Cannot determine OAuth endpoint for URL: { iv_url }| ).
+      ENDIF.
+      rs_provider_config-name            = 'GitHub Enterprise'.
+      rs_provider_config-device_code_url = lv_base_url && '/login/device/code'.
+      rs_provider_config-token_url       = lv_base_url && '/login/oauth/access_token'.
+      rs_provider_config-scope           = 'repo'.
     ENDIF.
 
     IF iv_client_id IS NOT INITIAL.
@@ -116,7 +140,9 @@ CLASS zcl_abapgit_oauth_device_flow IMPLEMENTATION.
     DATA lv_url_lower TYPE string.
 
     lv_url_lower = to_lower( iv_url ).
-    rv_bool = boolc( lv_url_lower CS 'github.com' OR lv_url_lower CS 'gitlab.com' ).
+    " Support any HTTPS URL: github.com, gitlab.com,
+    " GitHub Enterprise Server, and other OAuth-capable git servers
+    rv_bool = boolc( lv_url_lower CS 'https://' ).
 
   ENDMETHOD.
 

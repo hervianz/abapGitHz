@@ -91,7 +91,7 @@ CLASS zcl_abapgit_http IMPLEMENTATION.
           lv_use_basic    TYPE abap_bool,
           lo_digest       TYPE REF TO zcl_abapgit_http_digest.
 
-    " Offer OAuth Device Code (SSO) flow for known providers when GUI is available
+    " Offer OAuth Device Code (SSO) flow for any HTTPS repo when GUI is available
     IF zcl_abapgit_oauth_device_flow=>is_supported( iv_url ) = abap_true
     AND zcl_abapgit_ui_factory=>get_frontend_services( )->gui_is_available( ) = abap_true.
 
@@ -101,7 +101,8 @@ CLASS zcl_abapgit_http IMPLEMENTATION.
             IMPORTING  ev_use_basic = lv_use_basic
             RECEIVING  rv_token     = lv_token ).
         CATCH zcx_abapgit_exception ##NO_HANDLER.
-          " On dialog error fall through to basic auth
+          " OAuth failed (e.g. missing/wrong Client ID, network error,
+          " or API call context without a screen). Fall through to basic auth.
           lv_use_basic = abap_true.
       ENDTRY.
 
@@ -115,11 +116,10 @@ CLASS zcl_abapgit_http IMPLEMENTATION.
           name  = 'authorization'
           value = zcl_abapgit_login_manager=>load( iv_url ) ).
         RETURN.
-      ELSEIF lv_use_basic = abap_false AND lv_token IS INITIAL.
-        " OAuth was cancelled or failed - fall through to basic auth dialog
+      ELSE.
+        " OAuth was cancelled or failed - fall through to the basic-auth dialog
         lv_use_basic = abap_true.
       ENDIF.
-      " lv_use_basic = abap_true: fall through to standard credential dialog below
 
     ENDIF.
 
