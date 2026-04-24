@@ -116,8 +116,8 @@ CLASS zcl_abapgit_http IMPLEMENTATION.
           value = zcl_abapgit_login_manager=>load( iv_url ) ).
         RETURN.
       ELSEIF lv_use_basic = abap_false AND lv_token IS INITIAL.
-        " User cancelled the OAuth dialog
-        zcx_abapgit_exception=>raise( 'Authentication cancelled' ).
+        " OAuth was cancelled or failed - fall through to basic auth dialog
+        lv_use_basic = abap_true.
       ENDIF.
       " lv_use_basic = abap_true: fall through to standard credential dialog below
 

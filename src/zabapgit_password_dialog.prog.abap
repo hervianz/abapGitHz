@@ -382,7 +382,7 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
 
   METHOD on_screen_output_device.
 
-    ASSERT sy-dynnr = c_dynnr.
+    CHECK sy-dynnr = c_dynnr.
 
     LOOP AT SCREEN.
       IF screen-name = 'P_OURL'
@@ -402,7 +402,7 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
     DATA ls_result TYPE zcl_abapgit_oauth_device_flow=>ty_poll_result.
     DATA lx_err    TYPE REF TO zcx_abapgit_exception.
 
-    ASSERT sy-dynnr = c_dynnr.
+    CHECK sy-dynnr = c_dynnr.
 
     CASE iv_ucomm.
       WHEN 'OBR'.
@@ -452,15 +452,14 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
 
   METHOD on_screen_output_choice.
 
-    ASSERT sy-dynnr = c_dynnr_choice.
+    CHECK sy-dynnr = c_dynnr_choice.
 
+    " Keep Client ID always editable: radio button selection does not
+    " re-fire AT SELECTION-SCREEN OUTPUT, so conditional disabling would
+    " leave the field permanently grayed-out when Basic is the default.
     LOOP AT SCREEN.
       IF screen-name = 'P_MCID'.
-        IF p_mbasic = abap_true.
-          screen-input = '0'.
-        ELSE.
-          screen-input = '1'.
-        ENDIF.
+        screen-input = '1'.
         MODIFY SCREEN.
       ENDIF.
     ENDLOOP.
@@ -470,7 +469,7 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
 
   METHOD on_screen_event_choice.
 
-    ASSERT sy-dynnr = c_dynnr_choice.
+    CHECK sy-dynnr = c_dynnr_choice.
 
     CASE iv_ucomm.
       WHEN 'OK'.
