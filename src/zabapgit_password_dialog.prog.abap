@@ -488,7 +488,7 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
 
     DATA lv_host TYPE string.
 
-    FIND REGEX 'https?://([^/^:]*)' IN iv_url SUBMATCHES lv_host ##REGEX_POSIX.
+    FIND REGEX 'https?://([^/:]*)' IN iv_url SUBMATCHES lv_host ##REGEX_POSIX.
     IF lv_host IS NOT INITIAL AND lv_host <> space.
       CONCATENATE 'SSO Login:' lv_host INTO sc_otit
         IN CHARACTER MODE SEPARATED BY space.

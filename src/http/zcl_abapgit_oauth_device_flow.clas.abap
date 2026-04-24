@@ -88,12 +88,16 @@ CLASS zcl_abapgit_oauth_device_flow IMPLEMENTATION.
 
   METHOD get_provider_config.
 
-    IF iv_url CS 'github.com'.
+    DATA lv_url_lower TYPE string.
+
+    lv_url_lower = to_lower( iv_url ).
+
+    IF lv_url_lower CS 'github.com'.
       rs_provider_config-name            = 'GitHub'.
       rs_provider_config-device_code_url = 'https://github.com/login/device/code'.
       rs_provider_config-token_url       = 'https://github.com/login/oauth/access_token'.
       rs_provider_config-scope           = 'repo'.
-    ELSEIF iv_url CS 'gitlab.com'.
+    ELSEIF lv_url_lower CS 'gitlab.com'.
       rs_provider_config-name            = 'GitLab'.
       rs_provider_config-device_code_url = 'https://gitlab.com/oauth/authorize_device'.
       rs_provider_config-token_url       = 'https://gitlab.com/oauth/token'.
@@ -109,7 +113,10 @@ CLASS zcl_abapgit_oauth_device_flow IMPLEMENTATION.
 
   METHOD is_supported.
 
-    rv_bool = boolc( iv_url CS 'github.com' OR iv_url CS 'gitlab.com' ).
+    DATA lv_url_lower TYPE string.
+
+    lv_url_lower = to_lower( iv_url ).
+    rv_bool = boolc( lv_url_lower CS 'github.com' OR lv_url_lower CS 'gitlab.com' ).
 
   ENDMETHOD.
 
