@@ -87,8 +87,41 @@ CLASS zcl_abapgit_http IMPLEMENTATION.
     DATA: lv_default_user TYPE string,
           lv_user         TYPE string,
           lv_pass         TYPE string,
+          lv_token        TYPE string,
+          lv_use_basic    TYPE abap_bool,
           lo_digest       TYPE REF TO zcl_abapgit_http_digest.
 
+    " Offer OAuth Device Code (SSO) flow for known providers when GUI is available
+    IF zcl_abapgit_oauth_device_flow=>is_supported( iv_url ) = abap_true
+    AND zcl_abapgit_ui_factory=>get_frontend_services( )->gui_is_available( ) = abap_true.
+
+      TRY.
+          zcl_abapgit_oauth_dialog=>popup(
+            EXPORTING  iv_url       = iv_url
+            IMPORTING  ev_use_basic = lv_use_basic
+            RECEIVING  rv_token     = lv_token ).
+        CATCH zcx_abapgit_exception ##NO_HANDLER.
+          " On dialog error fall through to basic auth
+          lv_use_basic = abap_true.
+      ENDTRY.
+
+      IF lv_use_basic = abap_false AND lv_token IS NOT INITIAL.
+        " OAuth succeeded - store bearer token and return
+        zcl_abapgit_login_manager=>set_bearer(
+          iv_uri   = iv_url
+          iv_token = lv_token ).
+        " Set authorization header immediately so this request succeeds
+        ii_client->request->set_header_field(
+          name  = 'authorization'
+          value = zcl_abapgit_login_manager=>load( iv_url ) ).
+        RETURN.
+      ELSEIF lv_use_basic = abap_false AND lv_token IS INITIAL.
+        " User cancelled the OAuth dialog
+        zcx_abapgit_exception=>raise( 'Unauthorized access. Check your credentials' ).
+      ENDIF.
+      " lv_use_basic = abap_true: fall through to standard credential dialog below
+
+    ENDIF.
 
     lv_default_user = zcl_abapgit_persist_factory=>get_user( )->get_repo_login( iv_url ).
     lv_user         = lv_default_user.
