@@ -152,6 +152,24 @@ Some enterprise OAuth providers may require a client secret even for Device Code
 3. Verify the provider supports Device Code Flow
 4. Check if the device code URL is correct (edit if needed)
 
+### HTTP 401 "Unauthorized access to resource" After Successful Authorization
+
+**Symptom**: The Device Flow completed successfully ("Authorization successful!"), but the next clone/pull fails with `Unauthorized access to resource (HTTP 401). Check your credentials`.
+
+**Cause**: git smart-HTTP endpoints (e.g. `/info/refs?service=git-upload-pack`) do **not** accept `Authorization: Bearer <token>` headers — they require **HTTP Basic authentication** with the OAuth token used as the *password* and a provider-specific placeholder username:
+
+| Provider | Username | Password |
+|----------|----------|----------|
+| GitHub / GitHub Enterprise | `x-access-token` | OAuth access token |
+| GitLab | `oauth2` | OAuth access token |
+
+abapGit now does this conversion automatically after a successful device flow, so a fresh checkout of this branch resolves the symptom.
+
+**If you still see 401 with an SSO-protected organization (GitHub.com)**:
+- The OAuth App must be authorized for the organization. Open `https://github.com/settings/connections/applications/<CLIENT_ID>` and click **Enable SSO** next to the org name.
+- For GitHub Enterprise: the org admin may need to whitelist the OAuth App under **Organization settings → Third-party access**.
+- The OAuth token's scopes must include `repo` for private repository access (this is the default in this implementation).
+
 ### "Authentication cancelled" or Falls Back to Password Dialog
 
 **Cause**: OAuth flow failed or was cancelled.

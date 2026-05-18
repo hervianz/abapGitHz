@@ -88,6 +88,7 @@ CLASS zcl_abapgit_http IMPLEMENTATION.
           lv_user         TYPE string,
           lv_pass         TYPE string,
           lv_token        TYPE string,
+          lv_oauth_user   TYPE string,
           lv_use_basic    TYPE abap_bool,
           lo_digest       TYPE REF TO zcl_abapgit_http_digest.
 
@@ -107,14 +108,31 @@ CLASS zcl_abapgit_http IMPLEMENTATION.
       ENDTRY.
 
       IF lv_use_basic = abap_false AND lv_token IS NOT INITIAL.
-        " OAuth succeeded - store bearer token and return
-        zcl_abapgit_login_manager=>set_bearer(
-          iv_uri   = iv_url
-          iv_token = lv_token ).
-        " Set authorization header immediately so this request succeeds
-        ii_client->request->set_header_field(
-          name  = 'authorization'
-          value = zcl_abapgit_login_manager=>load( iv_url ) ).
+        " OAuth succeeded.
+        " IMPORTANT: git smart-HTTP (e.g. /info/refs?service=git-upload-pack)
+        " does NOT accept "Authorization: Bearer <token>" headers — it requires
+        " HTTP Basic authentication with the OAuth token used as the *password*
+        " and a provider-specific placeholder username:
+        "   GitHub / GitHub Enterprise -> "x-access-token"
+        "   GitLab                     -> "oauth2"
+        " Using set_bearer here would lead to HTTP 401 on every git request
+        " after a successful device-flow authorization.
+        IF to_lower( iv_url ) CS 'gitlab'.
+          lv_oauth_user = 'oauth2'.
+        ELSE.
+          lv_oauth_user = 'x-access-token'.
+        ENDIF.
+
+        zcl_abapgit_login_manager=>set_basic(
+          iv_uri      = iv_url
+          iv_username = lv_oauth_user
+          iv_password = lv_token ).
+
+        " Apply auth on the current client so the retried request succeeds
+        ii_client->authenticate(
+          username = lv_oauth_user
+          password = lv_token ).
+
         RETURN.
       ELSE.
         " OAuth was cancelled or failed - fall through to the basic-auth dialog
