@@ -158,7 +158,7 @@ CLASS lcl_password_dialog IMPLEMENTATION.
 
     DATA lt_ucomm TYPE TABLE OF sy-ucomm.
 
-    ASSERT sy-dynnr = c_dynnr.
+    CHECK sy-dynnr = c_dynnr.
 
     LOOP AT SCREEN.
       IF screen-name = 'P_URL' OR screen-name = 'P_CMNT'.
@@ -195,7 +195,7 @@ CLASS lcl_password_dialog IMPLEMENTATION.
 
   METHOD on_screen_event.
 
-    ASSERT sy-dynnr = c_dynnr.
+    CHECK sy-dynnr = c_dynnr.
 
     CASE iv_ucomm.
       WHEN 'OK'. " Enter
@@ -336,6 +336,7 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
 
     " sy-subrc = 1 means user exited via Back/Exit without confirming
     IF sy-subrc <> 0 OR gv_cancelled = abap_true.
+      ev_use_basic = abap_true.
       RETURN.
     ENDIF.
 
@@ -383,6 +384,9 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
 
     IF gv_confirmed = abap_true AND gv_token IS NOT INITIAL.
       rv_token = gv_token.
+    ELSE.
+      " OAuth cancelled or failed - signal caller to use basic auth
+      ev_use_basic = abap_true.
     ENDIF.
 
   ENDMETHOD.

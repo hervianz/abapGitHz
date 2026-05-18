@@ -28,6 +28,7 @@ CLASS zcl_abapgit_oauth_dialog IMPLEMENTATION.
   METHOD popup.
 
     DATA lx_error TYPE REF TO cx_sy_dyn_call_illegal_form.
+    DATA lx_git   TYPE REF TO zcx_abapgit_exception.
 
     ev_use_basic = abap_false.
 
@@ -38,6 +39,10 @@ CLASS zcl_abapgit_oauth_dialog IMPLEMENTATION.
           CHANGING rv_token ev_use_basic.
       CATCH cx_sy_dyn_call_illegal_form INTO lx_error.
         zcx_abapgit_exception=>raise_with_text( lx_error ).
+      CATCH zcx_abapgit_exception INTO lx_git.
+        " OAuth failed - signal caller to use basic auth, then re-raise
+        ev_use_basic = abap_true.
+        RAISE EXCEPTION lx_git.
     ENDTRY.
 
   ENDMETHOD.
