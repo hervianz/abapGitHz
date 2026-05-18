@@ -69,6 +69,10 @@ SELECTION-SCREEN COMMENT 1(22) sc_mcid FOR FIELD p_mcid.
 PARAMETERS: p_mcid TYPE string LOWER CASE VISIBLE LENGTH 60 ##SEL_WRONG.
 SELECTION-SCREEN END OF LINE.
 SELECTION-SCREEN BEGIN OF LINE.
+SELECTION-SCREEN COMMENT 1(22) sc_msec FOR FIELD p_msec.
+PARAMETERS: p_msec TYPE string LOWER CASE VISIBLE LENGTH 60 ##SEL_WRONG.
+SELECTION-SCREEN END OF LINE.
+SELECTION-SCREEN BEGIN OF LINE.
 SELECTION-SCREEN COMMENT 1(22) sc_mprv FOR FIELD p_mprv.
 PARAMETERS: p_mprv TYPE string LOWER CASE VISIBLE LENGTH 60 ##SEL_WRONG.
 SELECTION-SCREEN END OF LINE.
@@ -311,7 +315,7 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
            gv_confirmed, gv_cancelled, gv_use_basic.
 
     " Show auth method choice first
-    CLEAR: p_mbasic, p_moauth, p_mcid, p_mprv.
+    CLEAR: p_mbasic, p_moauth, p_mcid, p_msec, p_mprv.
     p_mbasic = abap_true.
 
     gs_provider = zcl_abapgit_oauth_device_flow=>get_provider_config( iv_url ).
@@ -320,10 +324,11 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
     p_mprv  = gs_provider-device_code_url.
 
     sc_mcid  = 'Client ID (OAuth App):'.
+    sc_msec  = 'Client Secret (opt):'.
     sc_mprv  = 'Device code URL:'.
     sc_mbas  = 'Username / Password / Personal Access Token'.
     sc_moas  = 'SSO (OAuth 2.0 Device Code Flow)'.
-    sc_mhlp  = 'OAuth: register an OAuth App and enter its Client ID above'.
+    sc_mhlp  = 'OAuth: register an OAuth App and enter its Client ID (+ Secret if required)'.
     sc_mtit  = 'Authentication Method'.
 
     ls_position = zcl_abapgit_popups=>center(
@@ -345,9 +350,14 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    " OAuth chosen: accept client_id from dialog
+    " OAuth chosen: accept client_id and client_secret from dialog
     IF p_mcid IS NOT INITIAL.
       gs_provider-client_id = p_mcid.
+    ENDIF.
+
+    " Accept optional client_secret
+    IF p_msec IS NOT INITIAL.
+      gs_provider-client_secret = p_msec.
     ENDIF.
 
     " Allow user to override the auto-detected device code URL

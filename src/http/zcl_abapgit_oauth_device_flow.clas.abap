@@ -11,6 +11,7 @@ CLASS zcl_abapgit_oauth_device_flow DEFINITION
         device_code_url TYPE string,
         token_url       TYPE string,
         client_id       TYPE string,
+        client_secret   TYPE string,
         scope           TYPE string,
       END OF ty_provider_config.
 
@@ -163,6 +164,9 @@ CLASS zcl_abapgit_oauth_device_flow IMPLEMENTATION.
 
     CREATE OBJECT lo_params.
     lo_params->set( iv_key = 'client_id' iv_val = is_config-client_id ).
+    IF is_config-client_secret IS NOT INITIAL.
+      lo_params->set( iv_key = 'client_secret' iv_val = is_config-client_secret ).
+    ENDIF.
     lo_params->set( iv_key = 'scope'     iv_val = is_config-scope ).
 
     lv_body = post_form(
@@ -208,6 +212,9 @@ CLASS zcl_abapgit_oauth_device_flow IMPLEMENTATION.
 
     CREATE OBJECT lo_params.
     lo_params->set( iv_key = 'client_id'   iv_val = is_config-client_id ).
+    IF is_config-client_secret IS NOT INITIAL.
+      lo_params->set( iv_key = 'client_secret' iv_val = is_config-client_secret ).
+    ENDIF.
     lo_params->set( iv_key = 'device_code' iv_val = iv_device_code ).
     lo_params->set( iv_key = 'grant_type'
                     iv_val = 'urn:ietf:params:oauth:grant-type:device_code' ).
