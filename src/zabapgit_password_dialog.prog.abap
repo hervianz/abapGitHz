@@ -339,8 +339,11 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
       STARTING AT ls_position-start_column ls_position-start_row
       ENDING AT ls_position-end_column ls_position-end_row.
 
-    " sy-subrc = 1 means user exited via Back/Exit without confirming
-    IF sy-subrc <> 0 OR gv_cancelled = abap_true.
+    " sy-subrc <> 0 only when user exited via Back/Exit/Cancel
+    " (those route through AT SELECTION-SCREEN ON EXIT-COMMAND and unwind here).
+    " gv_cancelled is not reliable on screen 1004 because the standard
+    " Execute action sends ucomm 'ONLI', not 'OK', so we only trust sy-subrc.
+    IF sy-subrc <> 0.
       ev_use_basic = abap_true.
       RETURN.
     ENDIF.
@@ -501,14 +504,12 @@ CLASS lcl_oauth_device_dialog IMPLEMENTATION.
 
     CHECK sy-dynnr = c_dynnr_choice.
 
-    CASE iv_ucomm.
-      WHEN 'OK'.
-        gv_cancelled = abap_false.
-        LEAVE TO SCREEN 0.
-      WHEN OTHERS.
-        gv_cancelled = abap_true.
-        LEAVE TO SCREEN 0.
-    ENDCASE.
+    " Any ucomm that reaches this handler means the user confirmed the dialog
+    " (Execute sends 'ONLI', Enter may send 'CRET'/'OK', etc.). Back/Exit/Cancel
+    " are exit-commands and are dispatched via AT SELECTION-SCREEN ON EXIT-COMMAND
+    " instead, never reaching this method. Treating WHEN OTHERS as cancel here
+    " would incorrectly abort the OAuth flow when the user clicks Execute.
+    LEAVE TO SCREEN 0.
 
   ENDMETHOD.
 

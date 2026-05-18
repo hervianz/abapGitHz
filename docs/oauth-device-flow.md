@@ -160,6 +160,18 @@ Some enterprise OAuth providers may require a client secret even for Device Code
 - Enter your username and PAT to continue
 - Click Cancel and try OAuth again with correct settings
 
+### Password Dialog Still Appears After Entering Client ID and Approving in Browser
+
+**Cause**: An earlier version of the dialog mis-detected the SAP standard "Execute" command (`ONLI`) on the authentication-method screen as a cancellation, so OAuth was silently skipped and the basic-auth popup was shown instead.
+
+**Solution**: Pull the latest version of this branch — the screen-1004 event handler no longer treats the Execute action as cancel and only relies on `sy-subrc` (which is non-zero only for true Back/Exit/Cancel). After updating, selecting **SSO (OAuth 2.0 Device Code Flow)** and clicking Execute will reliably show the device-code screen instead of the username/password popup.
+
+### Browser Did Not Open Automatically
+
+**Cause**: The SAP GUI front-end service `execute( iv_document = ... )` may silently fail on some platforms (e.g. when no default browser is registered, or in remote-GUI scenarios).
+
+**Solution**: Copy the **Verification URL** shown in the dialog and open it manually in any browser, enter the **User Code** displayed in abapGit, approve access, then click **Check Authorization** in the dialog. The "Open Browser" pushbutton can also be clicked again to retry.
+
 ## Security Notes
 
 1. **Token Storage**: OAuth access tokens are stored **in-memory only** during the session, just like PATs today. They do not persist across SAP sessions.
