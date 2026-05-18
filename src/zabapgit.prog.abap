@@ -57,6 +57,7 @@ INCLUDE zabapgit_forms.
 INITIALIZATION.
   PERFORM adjust_toolbar USING '1001'.
   lcl_password_dialog=>on_screen_init( ).
+  lcl_oauth_device_dialog=>on_screen_init( ).
 
 START-OF-SELECTION.
   PERFORM run.
@@ -65,6 +66,10 @@ START-OF-SELECTION.
 AT SELECTION-SCREEN OUTPUT.
   IF sy-dynnr = lcl_password_dialog=>c_dynnr.
     lcl_password_dialog=>on_screen_output( ).
+  ELSEIF sy-dynnr = lcl_oauth_device_dialog=>c_dynnr.
+    lcl_oauth_device_dialog=>on_screen_output_device( ).
+  ELSEIF sy-dynnr = lcl_oauth_device_dialog=>c_dynnr_choice.
+    lcl_oauth_device_dialog=>on_screen_output_choice( ).
   ELSE.
     PERFORM output.
   ENDIF.
@@ -76,4 +81,8 @@ AT SELECTION-SCREEN ON EXIT-COMMAND.
 AT SELECTION-SCREEN.
   IF sy-dynnr = lcl_password_dialog=>c_dynnr.
     lcl_password_dialog=>on_screen_event( sscrfields-ucomm ).
+  ELSEIF sy-dynnr = lcl_oauth_device_dialog=>c_dynnr.
+    lcl_oauth_device_dialog=>on_screen_event_device( sscrfields-ucomm ).
+  ELSEIF sy-dynnr = lcl_oauth_device_dialog=>c_dynnr_choice.
+    lcl_oauth_device_dialog=>on_screen_event_choice( sscrfields-ucomm ).
   ENDIF.

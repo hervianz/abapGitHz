@@ -87,8 +87,68 @@ CLASS zcl_abapgit_http IMPLEMENTATION.
     DATA: lv_default_user TYPE string,
           lv_user         TYPE string,
           lv_pass         TYPE string,
+          lv_token        TYPE string,
+          lv_oauth_user   TYPE string,
+          lv_oauth_host   TYPE string,
+          lv_use_basic    TYPE abap_bool,
           lo_digest       TYPE REF TO zcl_abapgit_http_digest.
 
+    " Offer OAuth Device Code (SSO) flow for any HTTPS repo when GUI is available
+    IF zcl_abapgit_oauth_device_flow=>is_supported( iv_url ) = abap_true
+    AND zcl_abapgit_ui_factory=>get_frontend_services( )->gui_is_available( ) = abap_true.
+
+      TRY.
+          zcl_abapgit_oauth_dialog=>popup(
+            EXPORTING  iv_url       = iv_url
+            IMPORTING  ev_use_basic = lv_use_basic
+            RECEIVING  rv_token     = lv_token ).
+        CATCH zcx_abapgit_exception ##NO_HANDLER.
+          " OAuth failed (e.g. missing/wrong Client ID, network error,
+          " or API call context without a screen). Fall through to basic auth.
+          lv_use_basic = abap_true.
+      ENDTRY.
+
+      IF lv_use_basic = abap_false AND lv_token IS NOT INITIAL.
+        " OAuth succeeded.
+        " IMPORTANT: git smart-HTTP (e.g. /info/refs?service=git-upload-pack)
+        " does NOT accept "Authorization: Bearer <token>" headers — it requires
+        " HTTP Basic authentication with the OAuth token used as the *password*
+        " and a provider-specific placeholder username:
+        "   GitHub / GitHub Enterprise -> "x-access-token"
+        "   GitLab                     -> "oauth2"
+        " Using set_bearer here would lead to HTTP 401 on every git request
+        " after a successful device-flow authorization.
+        " Mirror provider detection from zcl_abapgit_oauth_device_flow=>get_provider_config:
+        " gitlab.com -> GitLab placeholder username; everything else (github.com,
+        " GitHub Enterprise Server, self-hosted) -> GitHub-compatible placeholder.
+        TRY.
+            lv_oauth_host = to_lower( zcl_abapgit_url=>host( iv_url ) ).
+          CATCH zcx_abapgit_exception ##NO_HANDLER.
+            lv_oauth_host = to_lower( iv_url ).
+        ENDTRY.
+        IF lv_oauth_host CS 'gitlab.com'.
+          lv_oauth_user = 'oauth2'.
+        ELSE.
+          lv_oauth_user = 'x-access-token'.
+        ENDIF.
+
+        zcl_abapgit_login_manager=>set_basic(
+          iv_uri      = iv_url
+          iv_username = lv_oauth_user
+          iv_password = lv_token ).
+
+        " Apply auth on the current client so the retried request succeeds
+        ii_client->authenticate(
+          username = lv_oauth_user
+          password = lv_token ).
+
+        RETURN.
+      ELSE.
+        " OAuth was cancelled or failed - fall through to the basic-auth dialog
+        lv_use_basic = abap_true.
+      ENDIF.
+
+    ENDIF.
 
     lv_default_user = zcl_abapgit_persist_factory=>get_user( )->get_repo_login( iv_url ).
     lv_user         = lv_default_user.
