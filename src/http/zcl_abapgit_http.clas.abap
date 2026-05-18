@@ -118,16 +118,17 @@ CLASS zcl_abapgit_http IMPLEMENTATION.
         "   GitLab                     -> "oauth2"
         " Using set_bearer here would lead to HTTP 401 on every git request
         " after a successful device-flow authorization.
+        " Mirror provider detection from zcl_abapgit_oauth_device_flow=>get_provider_config:
+        " gitlab.com -> GitLab placeholder username; everything else (github.com,
+        " GitHub Enterprise Server, self-hosted) -> GitHub-compatible placeholder.
         TRY.
             lv_oauth_host = to_lower( zcl_abapgit_url=>host( iv_url ) ).
           CATCH zcx_abapgit_exception ##NO_HANDLER.
             lv_oauth_host = to_lower( iv_url ).
         ENDTRY.
-        IF lv_oauth_host CS 'gitlab.com' OR lv_oauth_host CP '*gitlab*'.
-          " GitLab cloud or any self-managed GitLab instance (hostname-based match)
+        IF lv_oauth_host CS 'gitlab.com'.
           lv_oauth_user = 'oauth2'.
         ELSE.
-          " GitHub.com, GitHub Enterprise Server, and other git providers
           lv_oauth_user = 'x-access-token'.
         ENDIF.
 
