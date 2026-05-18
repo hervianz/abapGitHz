@@ -89,6 +89,7 @@ CLASS zcl_abapgit_http IMPLEMENTATION.
           lv_pass         TYPE string,
           lv_token        TYPE string,
           lv_oauth_user   TYPE string,
+          lv_oauth_host   TYPE string,
           lv_use_basic    TYPE abap_bool,
           lo_digest       TYPE REF TO zcl_abapgit_http_digest.
 
@@ -117,9 +118,16 @@ CLASS zcl_abapgit_http IMPLEMENTATION.
         "   GitLab                     -> "oauth2"
         " Using set_bearer here would lead to HTTP 401 on every git request
         " after a successful device-flow authorization.
-        IF to_lower( iv_url ) CS 'gitlab'.
+        TRY.
+            lv_oauth_host = to_lower( zcl_abapgit_url=>host( iv_url ) ).
+          CATCH zcx_abapgit_exception ##NO_HANDLER.
+            lv_oauth_host = to_lower( iv_url ).
+        ENDTRY.
+        IF lv_oauth_host CS 'gitlab.com' OR lv_oauth_host CP '*gitlab*'.
+          " GitLab cloud or any self-managed GitLab instance (hostname-based match)
           lv_oauth_user = 'oauth2'.
         ELSE.
+          " GitHub.com, GitHub Enterprise Server, and other git providers
           lv_oauth_user = 'x-access-token'.
         ENDIF.
 

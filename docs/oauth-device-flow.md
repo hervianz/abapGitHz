@@ -163,7 +163,7 @@ Some enterprise OAuth providers may require a client secret even for Device Code
 | GitHub / GitHub Enterprise | `x-access-token` | OAuth access token |
 | GitLab | `oauth2` | OAuth access token |
 
-abapGit now does this conversion automatically after a successful device flow, so a fresh checkout of this branch resolves the symptom.
+abapGit now does this conversion automatically after a successful device flow.
 
 **If you still see 401 with an SSO-protected organization (GitHub.com)**:
 - The OAuth App must be authorized for the organization. Open `https://github.com/settings/connections/applications/<CLIENT_ID>` and click **Enable SSO** next to the org name.
