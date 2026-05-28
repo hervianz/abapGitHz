@@ -19,11 +19,15 @@ CLASS zcl_abapgit_repo_rfc DEFINITION
 *     default null client these will surface a clear "agent not
 *     installed" error instead of silently doing nothing.
 *
-* Why inherit from zcl_abapgit_repo_offline:
+* Why inherit from zcl_abapgit_repo (not zcl_abapgit_repo_offline):
 *   The remote side is fetched ad-hoc over RFC, not from a git
-*   server. The "remote" file table of an offline repo is the
-*   right place to stash it so the existing diff/stage flow can
-*   consume it unchanged.
+*   server. We need offline-style "remote is preserved on reset"
+*   behavior, but zcl_abapgit_repo_offline is declared FINAL and
+*   cannot be subclassed, so we inherit directly from the base
+*   class and re-implement the small reset_remote override.
+*   The "remote" file table is the right place to stash the
+*   RFC-fetched files so the existing diff/stage flow can
+*   consume them unchanged.
 
   PUBLIC SECTION.
 

@@ -61,7 +61,16 @@ transport / authorization errors.
 
 ### `zcl_abapgit_repo_rfc`
 
-Inherits from `zcl_abapgit_repo_offline` and adds:
+Inherits from `zcl_abapgit_repo` directly (sibling to
+`zcl_abapgit_repo_online` / `zcl_abapgit_repo_offline`). It
+re-implements the offline-style `reset_remote` so the last
+RFC-fetched payload is preserved across resets, since unlike an
+online repo there's no upstream server we can re-fetch from
+automatically. `zcl_abapgit_repo_offline` itself is declared
+`FINAL` and cannot be subclassed, so direct inheritance from
+the abstract base is the only option.
+
+Adds:
 
 - `set_rfc_destination` / `get_rfc_destination`
 - `set_remote_package`  / `get_remote_package`
