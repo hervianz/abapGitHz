@@ -37,6 +37,9 @@ CLASS zcl_abapgit_factory DEFINITION
     CLASS-METHODS get_function_module
       RETURNING
         VALUE(ri_function_module) TYPE REF TO zif_abapgit_function_module.
+    CLASS-METHODS get_rfc_client
+      RETURNING
+        VALUE(ri_rfc_client) TYPE REF TO zif_abapgit_rfc_client.
   PROTECTED SECTION.
   PRIVATE SECTION.
 
@@ -58,6 +61,7 @@ CLASS zcl_abapgit_factory DEFINITION
     CLASS-DATA gi_sap_namespace TYPE REF TO zif_abapgit_sap_namespace .
     CLASS-DATA gi_sap_report TYPE REF TO zif_abapgit_sap_report.
     CLASS-DATA gi_function_module TYPE REF TO zif_abapgit_function_module.
+    CLASS-DATA gi_rfc_client TYPE REF TO zif_abapgit_rfc_client.
     CLASS-DATA gi_default_transport TYPE REF TO zif_abapgit_default_transport .
 ENDCLASS.
 
@@ -181,6 +185,17 @@ CLASS zcl_abapgit_factory IMPLEMENTATION.
     ENDIF.
 
     ri_tadir = gi_tadir.
+
+  ENDMETHOD.
+
+
+  METHOD get_rfc_client.
+
+    IF gi_rfc_client IS NOT BOUND.
+      CREATE OBJECT gi_rfc_client TYPE zcl_abapgit_rfc_client_null.
+    ENDIF.
+
+    ri_rfc_client = gi_rfc_client.
 
   ENDMETHOD.
 ENDCLASS.

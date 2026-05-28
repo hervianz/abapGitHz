@@ -39,6 +39,9 @@ CLASS zcl_abapgit_injector DEFINITION
     CLASS-METHODS set_default_transport
       IMPORTING
         ii_default_transport TYPE REF TO zif_abapgit_default_transport.
+    CLASS-METHODS set_rfc_client
+      IMPORTING
+        ii_rfc_client TYPE REF TO zif_abapgit_rfc_client.
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
@@ -120,5 +123,10 @@ CLASS zcl_abapgit_injector IMPLEMENTATION.
 
   METHOD set_tadir.
     zcl_abapgit_factory=>gi_tadir = ii_tadir.
+  ENDMETHOD.
+
+
+  METHOD set_rfc_client.
+    zcl_abapgit_factory=>gi_rfc_client = ii_rfc_client.
   ENDMETHOD.
 ENDCLASS.
